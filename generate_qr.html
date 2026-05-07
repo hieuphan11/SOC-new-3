@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tạo QR Code Hội Viên CLB</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 2rem 1rem; }
+
+    .page-header { text-align: center; margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
+    .page-header p  { font-size: 13px; color: #777; }
+
+    .notice {
+      background: #fff8e1; border: 1px solid #ffc107;
+      border-radius: 10px; padding: 1rem 1.4rem;
+      max-width: 900px; margin: 0 auto 1.4rem;
+      font-size: 13px; color: #795a00; line-height: 1.9;
+    }
+    .notice strong { display: block; margin-bottom: 2px; font-size: 14px; }
+    .notice code {
+      background: rgba(0,0,0,0.07); padding: 1px 6px;
+      border-radius: 4px; font-family: monospace; font-size: 12px;
+    }
+
+    .url-bar {
+      max-width: 900px; margin: 0 auto 2rem;
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    }
+    .url-bar label { font-size: 13px; font-weight: bold; color: #1a1a2e; white-space: nowrap; }
+    .url-bar input {
+      flex: 1; min-width: 240px; padding: 9px 14px;
+      border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; outline: none;
+    }
+    .url-bar input:focus { border-color: #1a1a2e; }
+    .url-bar button {
+      padding: 9px 18px; background: #1a1a2e; color: #fff;
+      border: none; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap;
+    }
+    .url-bar button:hover { background: #0f3460; }
+
+    .grid {
+      display: flex; flex-wrap: wrap; gap: 18px;
+      justify-content: center; max-width: 940px; margin: 0 auto;
+    }
+    .qr-card {
+      background: #fff; border-radius: 14px;
+      padding: 1.2rem 1rem 1rem; width: 188px;
+      text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+    }
+    .qr-num {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #1a1a2e; color: #fff; font-size: 11px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;
+    }
+    .qr-box { margin-bottom: 10px; line-height: 0; display: flex; justify-content: center; }
+    .qr-box img, .qr-box canvas { border-radius: 6px; }
+    .qr-name { font-size: 13px; font-weight: bold; color: #1a1a2e; margin-bottom: 3px; }
+    .qr-job  { font-size: 10px; color: #999; line-height: 1.4; margin-bottom: 10px; }
+    .btn-view {
+      display: inline-block; padding: 5px 14px;
+      background: #f0f2f5; color: #1a1a2e;
+      border-radius: 20px; font-size: 11px; text-decoration: none;
+    }
+    .btn-view:hover { background: #e2e4e8; }
+
+    .print-bar { text-align: center; margin: 2rem 0 1rem; }
+    .print-bar button {
+      padding: 10px 28px; background: #1a1a2e; color: #fff;
+      border: none; border-radius: 25px; font-size: 14px; cursor: pointer;
+    }
+    .print-bar button:hover { background: #0f3460; }
+
+    #print-area { display: none; }
+
+    @media print {
+      body > *:not(#print-area) { display: none !important; }
+      #print-area { display: flex !important; flex-wrap: wrap; padding: 0; }
+      .pcard {
+        width: 8cm; border: 1px solid #ccc; border-radius: 8px;
+        padding: 12px 10px; margin: 4px; text-align: center;
+        page-break-inside: avoid; display: inline-block; vertical-align: top;
+      }
+      .pcard .p-name { font-size: 12px; font-weight: bold; margin-top: 6px; }
+      .pcard .p-job  { font-size: 10px; color: #666; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>🔲 QR Code Hội Viên CLB</h1>
+  <p>Quét mã để xem trang profile của từng hội viên</p>
+</div>
+
+<div class="notice">
+  <strong>⚙️ Cách sử dụng:</strong>
+  <b>Test trên máy tính:</b> Tải 2 file <code>member.html</code> và <code>generate_qr.html</code> về cùng 1 thư mục → mở <code>generate_qr.html</code> bằng Chrome/Edge.<br>
+  <b>Sau khi deploy GitHub Pages:</b> Nhập URL vào ô dưới → nhấn <b>Cập nhật QR</b> → QR tự vẽ lại với link thật.<br>
+  Ví dụ URL: <code>https://username.github.io/ten-repo</code>
+</div>
+
+<div class="url-bar">
+  <label>🌐 BASE URL GitHub Pages:</label>
+  <input type="text" id="inp-url" placeholder="https://username.github.io/ten-repo">
+  <button onclick="capNhatQR()">Cập nhật QR</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="print-bar">
+  <button onclick="window.print()">🖨️ In tất cả QR code</button>
+</div>
+
+<div id="print-area"></div>
+
+<script>
+// ================================================================
+//  DỮ LIỆU HỘI VIÊN — Chỉnh sửa thông tin tại đây
+//  Thêm hội viên: copy 1 block, đổi id dạng "ten-khong-dau-STT"
+// ================================================================
+var members = {
+  "vu-ngoc-cuong-1": {
+    id: "vu-ngoc-cuong-1", stt: 1,
+    ten: "Vũ Ngọc Cường", sdt: "0938688679",
+    ngaysinh: "27/06/1985", cccd: "15085011371",
+    diachi: "Số 10 lô O, đường 14 - Hoàng Quốc Việt, KDC Phú Mỹ, P. Tân Mỹ, TP.HCM",
+    nghenghiep: "GĐ - Cty CP Sứ Kỹ Thuật Hoàng Liên Sơn Sài Gòn",
+    biensoxe: "51K-808.79", avatar: ""
+  },
+  "nguyen-luong-binh-2": {
+    id: "nguyen-luong-binh-2", stt: 2,
+    ten: "Nguyễn Lương Bình", sdt: "0903814516",
+    ngaysinh: "12/04/1967", cccd: "15067500592",
+    diachi: "09 Hưng Thái 1, Phú Mỹ Hưng, P. Tân Hưng, TP.HCM",
+    nghenghiep: "Cty CP Tiến Việt",
+    biensoxe: "51D-359.63", avatar: ""
+  },
+  "phan-xuan-hai-3": {
+    id: "phan-xuan-hai-3", stt: 3,
+    ten: "Phan Xuân Hải", sdt: "0908295959",
+    ngaysinh: "16/09/1965", cccd: "22065008923",
+    diachi: "Số 23 đường 28, KP2, P. Bình Trưng, TP.HCM",
+    nghenghiep: "Cán bộ hưu trí",
+    biensoxe: "(Không có)", avatar: ""
+  },
+  "ho-thanh-tuan-4": {
+    id: "ho-thanh-tuan-4", stt: 4,
+    ten: "Hồ Thanh Tuấn", sdt: "0933888818",
+    ngaysinh: "15/12/1976", cccd: "94076000001",
+    diachi: "54 Nguyễn Thị Thập, P. Tân Hưng, TP.HCM",
+    nghenghiep: "Cty CP Ngọc Trai Hoàng Gia",
+    biensoxe: "51B-516.91", avatar: ""
+  },
+  "pham-sy-trung-5": {
+    id: "pham-sy-trung-5", stt: 5,
+    ten: "Phạm Sỹ Trung", sdt: "0903824985",
+    ngaysinh: "20/05/1967", cccd: "15067004553",
+    diachi: "16F Phùng Khắc Khoan, P. Đa Kao, TP.HCM",
+    nghenghiep: "Kiến trúc sư",
+    biensoxe: "51G-758.20", avatar: ""
+  },
+  "nguyen-quoc-bao-6": {
+    id: "nguyen-quoc-bao-6", stt: 6,
+    ten: "Nguyễn Quốc Bảo", sdt: "0973734242",
+    ngaysinh: "19/05/1968", cccd: "45068009268",
+    diachi: "16F 3/2 Hoàng Diệu, P. Phú Nhuận, TP.HCM",
+    nghenghiep: "Kiến trúc sư",
+    biensoxe: "51K-098.76", avatar: ""
+  },
+  "tran-cong-toan-7": {
+    id: "tran-cong-toan-7", stt: 7,
+    ten: "Trần Công Toàn", sdt: "0945626369",
+    ngaysinh: "15/03/1990", cccd: "89090024416",
+    diachi: "Mỹ Phú, Châu Phú, tỉnh An Giang",
+    nghenghiep: "Kỹ sư điện tử",
+    biensoxe: "51D-790.62", avatar: ""
+  }
+};
+// ================================================================
+
+// BASE URL tự động lấy thư mục hiện tại
+var baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+
+function profileUrl(id) {
+  return baseUrl + '/member.html?id=' + id;
+}
+
+function taoQR(containerId, url, size) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  new QRCode(el, {
+    text: url,
+    width: size,
+    height: size,
+    correctLevel: QRCode.CorrectLevel.H
+  });
+}
+
+function renderTatCa() {
+  var grid      = document.getElementById('grid');
+  var printArea = document.getElementById('print-area');
+  grid.innerHTML      = '';
+  printArea.innerHTML = '';
+
+  Object.keys(members).forEach(function(id) {
+    var m   = members[id];
+    var url = profileUrl(id);
+
+    // Card lưới
+    var card = document.createElement('div');
+    card.className = 'qr-card';
+    card.innerHTML =
+        '<div class="qr-num">' + m.stt + '</div>'
+      + '<div class="qr-box" id="qr-' + id + '"></div>'
+      + '<div class="qr-name">' + m.ten + '</div>'
+      + '<div class="qr-job">'  + m.nghenghiep + '</div>'
+      + '<a class="btn-view" href="member.html?id=' + id + '" target="_blank">Xem profile →</a>';
+    grid.appendChild(card);
+    taoQR('qr-' + id, url, 152);
+
+    // Card in
+    var pcard = document.createElement('div');
+    pcard.className = 'pcard';
+    pcard.innerHTML =
+        '<div id="pqr-' + id + '"></div>'
+      + '<div class="p-name">' + m.ten + '</div>'
+      + '<div class="p-job">'  + m.nghenghiep + '</div>';
+    printArea.appendChild(pcard);
+    taoQR('pqr-' + id, url, 118);
+  });
+}
+
+function capNhatQR() {
+  var val = document.getElementById('inp-url').value.trim();
+  if (val !== '') baseUrl = val.replace(/\/$/, '');
+  renderTatCa();
+}
+
+window.onload = function() {
+  renderTatCa();
+};
+</script>
+</body>
+</html>
